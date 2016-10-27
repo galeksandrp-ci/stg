@@ -84,6 +84,7 @@ public:
     bool                GetSpreadFee() const { return spreadFee; }
     bool                GetFreeMbAllowInet() const { return freeMbAllowInet; }
     bool                GetDayFeeIsLastDay() const { return dayFeeIsLastDay; }
+    bool                GetStopOnError() const { return stopOnError; }
     bool                GetWriteFreeMbTraffCost() const
         { return writeFreeMbTraffCost; }
     bool                GetShowFeeInCash() const { return showFeeInCash; }
@@ -132,6 +133,7 @@ private:
     bool        spreadFee;
     bool        freeMbAllowInet;
     bool        dayFeeIsLastDay;
+    bool        stopOnError;
     bool        writeFreeMbTraffCost;
     bool        showFeeInCash;
     unsigned    messageTimeout;

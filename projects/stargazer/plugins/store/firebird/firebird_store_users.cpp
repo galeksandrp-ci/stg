@@ -302,7 +302,7 @@ try
     st->Prepare("insert into tb_users_services (fk_user, fk_service) \
                     values (?, (select pk_service from tb_services \
                                 where name = ?))");
-    for(std::vector<std::string>::const_iterator it = conf.service.begin(); it != conf.service.end(); ++it)
+    for(std::vector<std::string>::const_iterator it = conf.services.begin(); it != conf.services.end(); ++it)
         {
         st->Set(1, uid);
         st->Set(2, *it);
@@ -516,7 +516,7 @@ try
         {
         std::string name;
         st->Get(1, name);
-        conf->service.push_back(name);
+        conf->services.push_back(name);
         }
 
     // User data

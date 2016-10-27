@@ -79,8 +79,7 @@ struct ADMIN_CONF
 //-----------------------------------------------------------------------------
 struct ADMIN_CONF_RES
 {
-    ADMIN_CONF_RES()
-    {}
+    ADMIN_CONF_RES() {}
     ADMIN_CONF_RES(const ADMIN_CONF_RES & rhs)
         : priv(rhs.priv),
           login(rhs.login),

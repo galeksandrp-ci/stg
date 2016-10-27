@@ -219,6 +219,7 @@ public:
     void            ProcessDayFeeSpread();
     void            ProcessNewMonth();
     void            ProcessDailyFee();
+    void            ProcessServices();
 
     bool            IsInetable();
     std::string     GetEnabledDirs() const;

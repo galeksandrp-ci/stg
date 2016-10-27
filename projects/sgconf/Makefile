@@ -7,21 +7,30 @@ include ../../Makefile.conf
 PROG = sgconf
 
 SRCS = ./main.cpp \
-       ./common_sg.cpp
+       ./options.cpp \
+       ./api_action.cpp \
+       ./actions.cpp \
+       ./admins.cpp \
+       ./tariffs.cpp \
+       ./users.cpp \
+       ./services.cpp \
+       ./corps.cpp \
+       ./info.cpp \
+       ./xml.cpp
 
-STGLIBS = conffiles \
-          srvconf \
+STGLIBS = srvconf \
           crypto \
           common
 
 STGLIBS_INCS = $(addprefix -I ../../stglibs/,$(addsuffix .lib/include,$(STGLIBS)))
 STGLIBS_LIBS = $(addprefix -L ../../stglibs/,$(addsuffix .lib,$(STGLIBS)))
 
-LIBS += $(addprefix -lstg,$(STGLIBS)) -lexpat $(LIB_THREAD) $(LIBICONV)
+LIBS += $(addprefix -lstg,$(STGLIBS)) -lexpat $(LIB_THREAD)
 
 ifeq ($(OS),linux)
 else
-LIBS += -lc
+LIBS += -lc \
+        -liconv
 endif
 
 SEARCH_DIRS = -I ../../include
@@ -56,11 +65,7 @@ $(PROG): $(OBJS)
 	$(CXX) $^ $(LDFLAGS) $(LIBS) -o $(PROG)
 
 clean:
-	rm -f deps $(PROG) *.o tags *.*~ .OS
-	rm -f .OS
-	rm -f .store
-	rm -f .db.sql
-	rm -f core*
+	rm -f deps $(PROG) *.o
 	$(MAKE) -C $(DIR_LIBSRC) clean
 
 distclean: clean
@@ -92,7 +97,7 @@ endif
 endif
 endif
 
-deps:	$(SRCS) ../../Makefile.conf
+deps: $(SRCS) ../../Makefile.conf
 	$(MAKE) -C $(DIR_LIBSRC)
 	@>deps ;\
 	for file in $(SRCS); do\

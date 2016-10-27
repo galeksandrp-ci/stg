@@ -38,15 +38,18 @@
  *
  */
 
+#include "postgresql_store.h"
+
+#include "postgresql_store_utils.h"
+#include "postgresql_store.h"
+
+#include "stg/module_settings.h"
+#include "stg/plugin_creator.h"
+
 #include <string>
 #include <vector>
 
 #include <libpq-fe.h>
-
-#include "stg/module_settings.h"
-#include "stg/plugin_creator.h"
-#include "postgresql_store_utils.h"
-#include "postgresql_store.h"
 
 namespace
 {
@@ -89,13 +92,12 @@ pthread_mutex_destroy(&mutex);
 int POSTGRESQL_STORE::ParseSettings()
 {
 std::vector<PARAM_VALUE>::iterator i;
-std::string s;
 
 for(i = settings.moduleParams.begin(); i != settings.moduleParams.end(); ++i)
     {
     if (i->value.empty())
         continue;
-    s = ToLower(i->param);
+    std::string s = ToLower(i->param);
     if (s == "server")
         {
         server = i->value.front();

@@ -290,7 +290,6 @@ try
     st->Get(3, td->tariffConf.fee);
     st->Get(4, td->tariffConf.free);
     st->Get(5, td->tariffConf.passiveCost);
-    //st->Get(6, td->tariffConf.traffType);
     td->tariffConf.traffType = TARIFF::IntToTraffType(Get<int>(st, 6));
     if (schemaVersion > 0)
         td->tariffConf.period = TARIFF::StringToPeriod(Get<std::string>(st, 7));

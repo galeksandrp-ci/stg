@@ -80,6 +80,7 @@ return o;
 class DIR_TRAFF_RES
 {
 public:
+    typedef RESETABLE<uint64_t> value_type;
     typedef RESETABLE<uint64_t> ValueType;
     typedef std::vector<ValueType> ContainerType;
     typedef ContainerType::size_type IndexType;
@@ -93,6 +94,7 @@ public:
     }
     const ValueType & operator[](IndexType idx) const { return traff[idx]; }
     ValueType & operator[](IndexType idx) { return traff[idx]; }
+    IndexType size() const { return traff.size(); }
     DIR_TRAFF GetData() const
     {
     DIR_TRAFF res;

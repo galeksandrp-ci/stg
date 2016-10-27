@@ -1342,6 +1342,75 @@ switch (settings->GetFeeChargeType())
 ResetPassiveTime();
 }
 //-----------------------------------------------------------------------------
+void USER_IMPL::ProcessServices()
+{
+struct tm tms;
+time_t t = stgTime;
+localtime_r(&t, &tms);
+
+double passiveTimePart = 1.0;
+if (!settings->GetFullFee())
+    {
+    passiveTimePart = GetPassiveTimePart();
+    }
+else
+    {
+    if (passive.ConstData())
+        {
+        printfd(__FILE__, "Don't charge fee `cause we are passive\n");
+        return;
+        }
+    }
+
+for (size_t i = 0; i < property.Conf().services.size(); ++i)
+    {
+    SERVICE_CONF conf;
+    if (m_services.Find(property.Conf().services[i], &conf))
+        continue;
+    if (conf.payDay == tms.tm_mday ||
+        (conf.payDay == 0 && tms.tm_mday == DaysInCurrentMonth()))
+        {
+        double c = cash;
+        double fee = conf.cost * passiveTimePart;
+        printfd(__FILE__, "Service fee. login: %8s Cash=%f Credit=%f  Fee=%f PassiveTimePart=%f fee=%f\n",
+                login.c_str(),
+                cash.ConstData(),
+                credit.ConstData(),
+                tariff->GetFee(),
+                passiveTimePart,
+                fee);
+        switch (settings->GetFeeChargeType())
+            {
+            case 0:
+                property.cash.Set(c - fee, sysAdmin, login, store, "Subscriber fee charge");
+                SetPrepaidTraff();
+                break;
+            case 1:
+                if (c + credit >= 0)
+                    {
+                    property.cash.Set(c - fee, sysAdmin, login, store, "Subscriber fee charge");
+                    SetPrepaidTraff();
+                    }
+                break;
+            case 2:
+                if (c + credit >= fee)
+                    {
+                    property.cash.Set(c - fee, sysAdmin, login, store, "Subscriber fee charge");
+                    SetPrepaidTraff();
+                    }
+                break;
+            case 3:
+                if (c >= 0)
+                    {
+                    property.cash.Set(c - fee, sysAdmin, login, store, "Subscriber fee charge");
+                    SetPrepaidTraff();
+                    }
+                break;
+            }
+        }
+    }
+}
+//-----------------------------------------------------------------------------
 void USER_IMPL::SetPrepaidTraff()
 {
 if (tariff != NULL)

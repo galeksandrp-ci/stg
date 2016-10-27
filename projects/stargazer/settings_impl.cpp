@@ -57,6 +57,7 @@ SETTINGS_IMPL::SETTINGS_IMPL(const std::string & cd)
       spreadFee(false),
       freeMbAllowInet(false),
       dayFeeIsLastDay(false),
+      stopOnError(true),
       writeFreeMbTraffCost(false),
       showFeeInCash(true),
       messageTimeout(0),
@@ -69,9 +70,7 @@ SETTINGS_IMPL::SETTINGS_IMPL(const std::string & cd)
 }
 //-----------------------------------------------------------------------------
 SETTINGS_IMPL::SETTINGS_IMPL(const SETTINGS_IMPL & rval)
-    : SETTINGS(),
-      strError(),
-      modulesPath(rval.modulesPath),
+    : modulesPath(rval.modulesPath),
       dirName(rval.dirName),
       confDir(rval.confDir),
       scriptsDir(rval.scriptsDir),
@@ -90,6 +89,7 @@ SETTINGS_IMPL::SETTINGS_IMPL(const SETTINGS_IMPL & rval)
       spreadFee(rval.spreadFee),
       freeMbAllowInet(rval.freeMbAllowInet),
       dayFeeIsLastDay(rval.dayFeeIsLastDay),
+      stopOnError(rval.stopOnError),
       writeFreeMbTraffCost(rval.writeFreeMbTraffCost),
       showFeeInCash(rval.showFeeInCash),
       messageTimeout(rval.messageTimeout),
@@ -125,6 +125,7 @@ SETTINGS_IMPL & SETTINGS_IMPL::operator=(const SETTINGS_IMPL & rhs)
     spreadFee = rhs.spreadFee;
     freeMbAllowInet = rhs.freeMbAllowInet;
     dayFeeIsLastDay = rhs.dayFeeIsLastDay;
+    stopOnError = rhs.stopOnError;
     writeFreeMbTraffCost = rhs.writeFreeMbTraffCost;
     showFeeInCash = rhs.showFeeInCash;
     messageTimeout = rhs.messageTimeout;
@@ -330,6 +331,15 @@ while (node)
         if (ParseYesNo(node->getValue(0), &dayFeeIsLastDay) != 0)
             {
             strError = "Incorrect DayFeeIsLastDay value: \'" + std::string(node->getValue(0)) + "\'";
+            return -1;
+            }
+        }
+
+    if (strcasecmp(node->getName(), "StopOnError") == 0)
+        {
+        if (ParseYesNo(node->getValue(0), &stopOnError) != 0)
+            {
+            strError = "Incorrect StopOnError value: \'" + std::string(node->getValue(0)) + "\'";
             return -1;
             }
         }

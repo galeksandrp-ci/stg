@@ -57,9 +57,8 @@ const char    * IntToKMG(int64_t a, int statType = ST_F);
 const char    * LogDate(time_t t);
 int             ParesTimeStat(const char * str);
 int             IsTimeStat(struct tm * t, int statTime);
-/*bool            IsDigit(char c);
-bool            IsAlpha(char c);*/
-int             strtodouble2(const char * s, double &a);
+int             strtodouble2(const char * str, double & value);
+inline int      strtodouble2(const std::string & str, double & value) { return strtodouble2(str.c_str(), value); }
 int             printfd(const char * __file__, const char * fmt, ...);
 void            Encode12(char * dst, const char * src, size_t srcLen);
 void            Decode21(char * dst, const char * src);
@@ -77,9 +76,9 @@ void            WinToKOI(const std::string & s1, std::string * s2);
 int             DaysInMonth(unsigned year, unsigned mon);
 int             DaysInCurrentMonth();
 int             Min8(int a);
-//char          * inet_ntostr(unsigned long);
 std::string     inet_ntostring(uint32_t);
 uint32_t        inet_strington(const std::string & value);
+std::string     TimeToString(time_t time);
 int             strprintf(std::string * str, const char * fmt, ...);
 int             ParseTariffTimeStr(const char * str, int &h1, int &m1, int &h2, int &m2);
 uint32_t        CalcMask(uint32_t msk);
@@ -98,11 +97,13 @@ void            SwapBytes(int64_t & value);
 std::string &   TrimL(std::string & val);
 std::string &   TrimR(std::string & val);
 std::string &   Trim(std::string & val);
+std::string     Trim(const std::string & val);
 
-std::string ToLower(std::string value);
-std::string ToUpper(std::string value);
+std::string     ToLower(std::string value);
+std::string     ToUpper(std::string value);
 
 template <typename C, typename F>
+inline
 C Split(const std::string & value, char delim, F conv)
 {
 C res;
@@ -119,6 +120,7 @@ return res;
 }
 
 template <typename T>
+inline
 T FromString(const std::string & value)
 {
 T res;
@@ -127,10 +129,18 @@ stream >> res;
 return res;
 }
 
+template <>
+inline
+std::string FromString<std::string>(const std::string & value)
+{
+return value;
+}
+
 template <typename C>
+inline
 C Split(const std::string & value, char delim)
 {
-    return Split<C>(value, delim, FromString);
+    return Split<C>(value, delim, FromString<typename C::value_type>);
 }
 
 std::string IconvString(const std::string & source, const std::string & from, const std::string & to);
@@ -154,7 +164,8 @@ time_t readTime(const std::string & value);
 //-----------------------------------------------------------------------------
 int str2x(const std::string & str, int32_t & x);
 int str2x(const std::string & str, uint32_t & x);
-int str2x(const std::string & str, double & x);
+inline
+int str2x(const std::string & str, double & x) { return strtodouble2(str.c_str(), x); }
 #ifndef WIN32
 int str2x(const std::string & str, int64_t & x);
 int str2x(const std::string & str, uint64_t & x);
@@ -211,7 +222,7 @@ int str2x(const std::string & str, varT & x)
         x += str[i] - '0';
     }
 
-    x*= minus;
+    x *= minus;
 
     return 0;
 }
