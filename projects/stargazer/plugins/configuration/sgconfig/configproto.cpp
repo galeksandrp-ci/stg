@@ -27,9 +27,7 @@
 #include "parser_admins.h"
 #include "parser_tariffs.h"
 #include "parser_users.h"
-#include "parser_services.h"
 #include "parser_message.h"
-#include "parser_user_info.h"
 #include "parser_auth_by.h"
 
 #include "stg/common.h"
@@ -55,8 +53,6 @@ CONFIGPROTO::CONFIGPROTO(PLUGIN_LOGGER & l)
       m_admins(NULL),
       m_tariffs(NULL),
       m_users(NULL),
-      m_services(NULL),
-      m_corporations(NULL),
       m_store(NULL),
       m_port(0),
       m_bindAddress("0.0.0.0"),
@@ -83,6 +79,7 @@ int CONFIGPROTO::Prepare()
     sigaddset(&sigmask, SIGUSR1);
     sigaddset(&sigmask, SIGHUP);
     pthread_sigmask(SIG_BLOCK, &sigmask, &oldmask);
+
     m_listenSocket = socket(PF_INET, SOCK_STREAM, 0);
 
     if (m_listenSocket < 0)
@@ -210,8 +207,6 @@ void CONFIGPROTO::RegisterParsers()
     assert(m_admins != NULL);
     assert(m_users != NULL);
     assert(m_tariffs != NULL);
-    assert(m_services != NULL);
-    assert(m_corporations != NULL);
 
     SP::GET_SERVER_INFO::FACTORY::Register(m_registry, *m_settings, *m_users, *m_tariffs);
 
@@ -232,17 +227,9 @@ void CONFIGPROTO::RegisterParsers()
     SP::CHG_USER::FACTORY::Register(m_registry, *m_users, *m_store, *m_tariffs);
     SP::CHECK_USER::FACTORY::Register(m_registry, *m_users);
 
-    SP::GET_SERVICES::FACTORY::Register(m_registry, *m_services);
-    SP::GET_SERVICE::FACTORY::Register(m_registry, *m_services);
-    SP::ADD_SERVICE::FACTORY::Register(m_registry, *m_services);
-    SP::DEL_SERVICE::FACTORY::Register(m_registry, *m_services);
-    SP::CHG_SERVICE::FACTORY::Register(m_registry, *m_services);
-
     SP::SEND_MESSAGE::FACTORY::Register(m_registry, *m_users);
 
     SP::AUTH_BY::FACTORY::Register(m_registry, *m_users);
-
-    SP::USER_INFO::FACTORY::Register(m_registry, *m_users);
 }
 
 int CONFIGPROTO::MaxFD() const

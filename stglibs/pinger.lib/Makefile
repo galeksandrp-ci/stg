@@ -10,7 +10,8 @@ INCS = pinger.h
 
 LIBS = $(LIB_THREAD)
 
-LIB_INCS = -I ../common.lib/include
+LIB_INCS = -I ../locker.lib/include \
+	   -I ../common.lib/include
 
 include ../Makefile.in
 

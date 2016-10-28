@@ -39,7 +39,7 @@ struct USER_CONF
     std::string              note;
     std::string              realName;
     std::string              corp;
-    std::vector<std::string> services;
+    std::vector<std::string> service;
     std::string              group;
     double                   credit;
     std::string              nextTariff;
@@ -67,12 +67,13 @@ struct USER_CONF_RES
         email        = uc.email;
         note         = uc.note;
         realName     = uc.realName;
-        corp         = uc.corp;
         group        = uc.group;
         credit       = uc.credit;
         nextTariff   = uc.nextTariff;
-        for (size_t i = 0; i < USERDATA_NUM; i++) userdata[i]  = uc.userdata[i];
-        services     = uc.services;
+        for (int i = 0; i < USERDATA_NUM; i++)
+            {
+            userdata[i]  = uc.userdata[i];
+            }
         creditExpire = uc.creditExpire;
         ips          = uc.ips;
         return *this;
@@ -91,15 +92,13 @@ struct USER_CONF_RES
         uc.email        = email.data();
         uc.note         = note.data();
         uc.realName     = realName.data();
-        uc.corp         = corp.data();
         uc.group        = group.data();
         uc.credit       = credit.data();
         uc.nextTariff   = nextTariff.data();
-        for (size_t i = 0; i < USERDATA_NUM; i++)
+        for (int i = 0; i < USERDATA_NUM; i++)
             {
             uc.userdata[i]  = userdata[i].data();
             }
-        uc.services     = services.data();
         uc.creditExpire = creditExpire.data();
         uc.ips          = ips.data();
         return uc;
@@ -117,12 +116,10 @@ struct USER_CONF_RES
     RESETABLE<std::string>               email;
     RESETABLE<std::string>               note;
     RESETABLE<std::string>               realName;
-    RESETABLE<std::string>               corp;
     RESETABLE<std::string>               group;
     RESETABLE<double>                    credit;
     RESETABLE<std::string>               nextTariff;
     std::vector<RESETABLE<std::string> > userdata;
-    RESETABLE<std::vector<std::string> > services;
     RESETABLE<time_t>                    creditExpire;
     RESETABLE<USER_IPS>                  ips;
 };

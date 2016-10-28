@@ -13,10 +13,7 @@
 #define MAXKEYBYTES 56          /* 448 bits */
 
 #ifdef __cplusplus
-#include <cstddef> // size_t
 extern "C" {
-#else
-#include <stddef.h> // size_t
 #endif
 
 typedef struct {

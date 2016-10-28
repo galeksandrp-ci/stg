@@ -21,9 +21,9 @@
 #ifndef CORPORATIONS_H
 #define CORPORATIONS_H
 
-#include "corp_conf.h"
-
 #include <string>
+
+#include "corp_conf.h"
 
 class ADMIN;
 

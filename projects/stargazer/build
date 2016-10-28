@@ -391,19 +391,6 @@ else
     fi
 fi
 
-printf "Checking for -lpcap... "
-printf "#include <pcap.h>\nint main() { return 0; }\n" > build_check.c
-$CC $CFLAGS $LDFLAGS build_check.c -lpcap -o fake > /dev/null 2> /dev/null
-if [ $? != 0 ]
-then
-    CHECK_PCAP=no
-    printf "no\n"
-else
-    CHECK_PCAP=yes
-    printf "yes\n"
-fi
-rm -f fake
-
 printf "Checking for -lnfnetlink... "
 printf "#include <stdint.h>\n#include <netinet/in.h>\n#include <linux/netfilter.h>\nint main() { return 0; }\n" > build_check.c
 $CC $CFLAGS $LDFLAGS build_check.c -lnfnetlink -o fake > /dev/null 2> /dev/null
@@ -487,12 +474,6 @@ then
              configuration/rpcconfig"
 fi
 
-if [ "$CHECK_PCAP" = "yes" ]
-then
-    PLUGINS="$PLUGINS
-             capture/pcap"
-fi
-
 if [ "$CHECK_NFNETLINK" = "yes" -a "$CHECK_NFQ" = "yes" ]
 then
     PLUGINS="$PLUGINS
@@ -534,7 +515,6 @@ then
     printf "XMLRPC_CFLAGS=$XMLRPC_CFLAGS\n" >> $CONFFILE
     printf "XMLRPC_LDFLAGS=$XMLRPC_LDFLAGS\n" >> $CONFFILE
 fi
-printf "CHECK_PCAP=$CHECK_PCAP\n" >> $CONFFILE
 printf "CHECK_NFNETLINK=$CHECK_NFNETLINK\n" >> $CONFFILE
 if [ "$CHECK_NFNETLINK" = "yes" ]
 then

@@ -15,13 +15,37 @@
  */
 
 /*
- *    Author : Maxim Mamontiv <faust@stargazer.dp.ua>
+ *    Author : Boris Mikhailenko <stg34@stargazer.dp.ua>
  */
 
-#ifndef __VERSION_H__
-#define __VERSION_H__
+ /*
+ $Author: nobunaga $
+ $Revision: 1.2 $
+ $Date: 2008/05/11 08:15:08 $
+ */
 
-// Stargazer version
-#define SERVER_VERSION "2.409"
+
+
+#ifndef STG_ERROR_CODES_H
+#define STG_ERROR_CODES_H
+
+#ifndef ENODATA
+#define ENODATA 61
+#endif
+
+#ifndef EBADMSG
+#define EBADMSG 74
+#endif
+
+#define NETWORK_ERR_CODE            (1)
+#define LOGIN_OR_PASS_ERR_CODE      (2)
+#define USER_NOT_FOUND_ERR_CODE     (3)
+#define TARIFF_NOT_FOUND_ERR_CODE   (4)
+#define PARAMETER_PARSING_ERR_CODE  (5)
+#define UNKNOWN_ERR_CODE            (6)
+#define ICONV_ERR_CODE              (7)
+
 
 #endif
+
+

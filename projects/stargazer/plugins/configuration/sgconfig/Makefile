@@ -13,10 +13,8 @@ SRCS = ./stgconfig.cpp \
        ./parser_tariffs.cpp \
        ./parser_admins.cpp \
        ./parser_users.cpp \
-       ./parser_services.cpp \
        ./parser_message.cpp \
        ./parser_auth_by.cpp \
-       ./parser_user_info.cpp \
        ./parser_server_info.cpp
 
 LIBS += -lexpat \

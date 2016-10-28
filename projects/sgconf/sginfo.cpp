@@ -20,22 +20,22 @@
 
  /*
  $Author: faust $
- $Revision: 1.25 $
- $Date: 2010/03/25 14:37:43 $
+ $Revision: 1.3 $
+ $Date: 2009/06/22 15:57:49 $
  */
 
-#include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <getopt.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <string.h>
 #include <iconv.h>
-#include <langinfo.h>
-
-#include <cerrno>
-#include <clocale>
-#include <cstdio>
-#include <cstring>
 #include <string>
 #include <list>
-#include <sstream>
+#include <errno.h>
 
 #include "stg/common.h"
 #include "stg/netunit.h"
@@ -48,7 +48,7 @@ using namespace std;
 time_t stgTime;
 
 int ParseReplyGet(void * data, list<string> * ans);
-//int ParseReplySet(void * data, list<string> * ans);
+int ParseReplySet(void * data, list<string> * ans);
 
 struct option long_options_get[] = {
 {"server",      1, 0, 's'},  //Server
@@ -64,8 +64,6 @@ struct option long_options_get[] = {
 {"password",    0, 0, 'o'},  //password
 {"down",        0, 0, 'd'},  //down
 {"passive",     0, 0, 'i'},  //passive
-{"disable-stat",0, 0, 'S'},  //disable detail stat
-{"always-online",0, 0, 'O'}, //always online
 {"u0",          0, 0, 500},  //U0
 {"u1",          0, 0, 501},  //U1
 {"u2",          0, 0, 502},  //U2
@@ -108,8 +106,6 @@ struct option long_options_get[] = {
 {"email",       0, 0, 'L'},  //emaiL
 {"phone",       0, 0, 'P'},  //phone
 {"group",       0, 0, 'G'},  //Group
-{"ip",          0, 0, 'I'},  //IP-address of user
-{"authorized-by",0, 0, 800}, //always online
 
 {0, 0, 0, 0}};
 
@@ -127,8 +123,6 @@ struct option long_options_set[] = {
 {"password",    1, 0, 'o'},  //password
 {"down",        1, 0, 'd'},  //down
 {"passive",     1, 0, 'i'},  //passive
-{"disable-stat",1, 0, 'S'},  //disable detail stat
-{"always-online",1, 0, 'O'},  //always online
 {"u0",          1, 0, 500},  //U0
 {"u1",          1, 0, 501},  //U1
 {"u2",          1, 0, 502},  //U2
@@ -171,10 +165,16 @@ struct option long_options_set[] = {
 {"email",       1, 0, 'L'},  //emaiL
 {"phone",       1, 0, 'P'},  //phone
 {"group",       1, 0, 'G'},  //Group
-{"ip",		0, 0, 'I'},  //IP-address of user
 
 {0, 0, 0, 0}};
 
+//-----------------------------------------------------------------------------
+void CreateRequestGet(REQUEST * req, char * r)
+{
+string r1;
+r1 = "<GetUser login=\"" + req->login.const_data() + "\"/>\n";
+strcpy(r, r1.c_str());
+}
 //-----------------------------------------------------------------------------
 double ParseCash(const char * c, string * message)
 {
@@ -313,23 +313,7 @@ delete[] s;
 return ss;
 }
 //-----------------------------------------------------------------------------
-time_t ParseCreditExpire(const char * str)
-{
-struct tm brokenTime;
-
-brokenTime.tm_wday = 0;
-brokenTime.tm_yday = 0;
-brokenTime.tm_isdst = 0;
-brokenTime.tm_hour = 0;
-brokenTime.tm_min = 0;
-brokenTime.tm_sec = 0;
-
-stg_strptime(str, "%Y-%m-%d", &brokenTime);
-
-return stg_timegm(&brokenTime);
-}
-//-----------------------------------------------------------------------------
-void ParseAnyString(const char * c, string * msg, const char * enc)
+void ParseAnyString(const char * c, string * msg)
 {
 iconv_t cd;
 char * ob = new char[strlen(c) + 1];
@@ -345,7 +329,7 @@ setlocale(LC_ALL, "");
 char charsetF[255];
 strncpy(charsetF, nl_langinfo(CODESET), 255);
 
-const char * charsetT = enc;
+char * charsetT = "koi8-ru";
 
 size_t nconv = 1;
 
@@ -369,11 +353,7 @@ if (cd == (iconv_t) -1)
     exit(ICONV_ERR_CODE);
     }
 
-#if defined(CONST_ICONV)
-nconv = iconv (cd, (const char**)&inbuf, &insize, &outbuf, &outsize);
-#else
 nconv = iconv (cd, &inbuf, &insize, &outbuf, &outsize);
-#endif
 //printf("nconv=%d outsize=%d\n", nconv, outsize);
 if (nconv == (size_t) -1)
     {
@@ -401,13 +381,18 @@ memset(str, 0, strLen);
 
 r[0] = 0;
 
-if (!req->usrMsg.empty())
+if (!req->usrMsg.res_empty())
     {
-    string msg;
-    Encode12str(msg, req->usrMsg.const_data());
-    sprintf(str, "<Message login=\"%s\" msgver=\"1\" msgtype=\"1\" repeat=\"0\" repeatperiod=\"0\" showtime=\"0\" text=\"%s\"/>", req->login.const_data().c_str(), msg.c_str());
+    int len = req->usrMsg.const_data().length() * 2 + 1;
+    char * msg = new char[len];
+    memset(msg, 0, len);
+    Encode12(msg, req->usrMsg.const_data().c_str(), req->usrMsg.const_data().length());
+
+    sprintf(str, "<Message login=\"%s\" msgver=\"1\" msgtype=\"1\" repeat=\"0\" repeatperiod=\"0\" showtime=\"0\" text=\"%s\"/>", req->login.const_data().c_str(), msg);
     //sprintf(str, "<message login=\"%s\" priority=\"0\" text=\"%s\"/>\n", req->login, msg);
     strcat(r, str);
+
+    delete[] msg;
     return;
     }
 
@@ -430,74 +415,56 @@ if (req->createUser)
 strcat(r, "<SetUser>\n");
 sprintf(str, "<login value=\"%s\"/>\n", req->login.const_data().c_str());
 strcat(r, str);
-if (!req->credit.empty())
+if (!req->credit.res_empty())
     {
     sprintf(str, "<credit value=\"%f\"/>\n", req->credit.const_data());
     strcat(r, str);
     }
 
-if (!req->creditExpire.empty())
-    {
-    sprintf(str, "<creditExpire value=\"%ld\"/>\n", req->creditExpire.const_data());
-    strcat(r, str);
-    }
-
-if (!req->prepaidTraff.empty())
+if (!req->prepaidTraff.res_empty())
     {
     sprintf(str, "<FreeMb value=\"%f\"/>\n", req->prepaidTraff.const_data());
     strcat(r, str);
     }
 
-if (!req->cash.empty())
+if (!req->cash.res_empty())
     {
-    string msg;
-    Encode12str(msg, req->message.c_str());
-    sprintf(str, "<cash add=\"%f\" msg=\"%s\"/>\n", req->cash.const_data(), msg.c_str());
+    int len = req->message.length() * 2 + 1;
+    char * msg = new char[len];
+    memset(msg, 0, len);
+
+    Encode12(msg, req->message.c_str(), req->message.length());
+    sprintf(str, "<cash add=\"%f\" msg=\"%s\"/>\n", req->cash.const_data(), msg);
     strcat(r, str);
+    delete[] msg;
     }
 
-if (!req->setCash.empty())
+if (!req->setCash.res_empty())
     {
-    string msg;
-    Encode12str(msg, req->message.c_str());
-    sprintf(str, "<cash set=\"%f\" msg=\"%s\"/>\n", req->setCash.const_data(), msg.c_str());
+    int len = req->message.length() * 2 + 1;
+    char * msg = new char[len];
+    memset(msg, 0, len);
+    Encode12(msg, req->message.c_str(), req->message.length());
+    sprintf(str, "<cash set=\"%f\" msg=\"%s\"/>\n", req->setCash.const_data(), msg);
     strcat(r, str);
+    delete[] msg;
     }
 
-if (!req->usrPasswd.empty())
+if (!req->usrPasswd.res_empty())
     {
     sprintf(str, "<password value=\"%s\" />\n", req->usrPasswd.const_data().c_str());
     strcat(r, str);
     }
 
-if (!req->down.empty())
+if (!req->down.res_empty())
     {
     sprintf(str, "<down value=\"%d\" />\n", req->down.const_data());
     strcat(r, str);
     }
 
-if (!req->passive.empty())
+if (!req->passive.res_empty())
     {
     sprintf(str, "<passive value=\"%d\" />\n", req->passive.const_data());
-    strcat(r, str);
-    }
-
-if (!req->disableDetailStat.empty())
-    {
-    sprintf(str, "<disableDetailStat value=\"%d\" />\n", req->disableDetailStat.const_data());
-    strcat(r, str);
-    }
-
-if (!req->alwaysOnline.empty())
-    {
-    sprintf(str, "<aonline value=\"%d\" />\n", req->alwaysOnline.const_data());
-    strcat(r, str);
-    }
-
-// IP-address of user
-if (!req->ips.empty())
-    {
-    sprintf(str, "<ip value=\"%s\" />\n", req->ips.const_data().c_str());
     strcat(r, str);
     }
 
@@ -505,7 +472,7 @@ int uPresent = false;
 int dPresent = false;
 for (int i = 0; i < DIR_NUM; i++)
     {
-    if (!req->u[i].empty())
+    if (!req->u[i].res_empty())
         {
         if (!uPresent && !dPresent)
             {
@@ -520,7 +487,7 @@ for (int i = 0; i < DIR_NUM; i++)
         sprintf(str, "MU%d=\"%s\" ", i, ss.str().c_str());
         strcat(r, str);
         }
-    if (!req->d[i].empty())
+    if (!req->d[i].res_empty())
         {
         if (!uPresent && !dPresent)
             {
@@ -542,7 +509,7 @@ if (uPresent || dPresent)
 
 //printf("%s\n", r);
 
-if (!req->tariff.empty())
+if (!req->tariff.res_empty())
     {
     switch (req->chgTariff)
         {
@@ -562,62 +529,97 @@ if (!req->tariff.empty())
 
     }
 
-if (!req->note.empty())
+if (!req->note.res_empty())
     {
-    string note;
-    Encode12str(note, req->note.const_data());
-    sprintf(str, "<note value=\"%s\"/>", note.c_str());
+    int len = req->note.const_data().length() * 2 + 1;
+    char * note = new char[len];
+    memset(note, 0, len);
+
+    Encode12(note, req->note.const_data().c_str(), req->note.const_data().length());
+
+    sprintf(str, "<note value=\"%s\"/>", note);
     strcat(r, str);
+    delete[] note;
     }
 
-if (!req->name.empty())
+if (!req->name.res_empty())
     {
-    string name;
-    Encode12str(name, req->name.const_data());
-    sprintf(str, "<name value=\"%s\"/>", name.c_str());
+    int len = req->note.const_data().length() * 2 + 1;
+    char * name = new char[len];
+    memset(name, 0, len);
+
+    Encode12(name, req->name.const_data().c_str(), req->name.const_data().length());
+
+    sprintf(str, "<name value=\"%s\"/>", name);
     strcat(r, str);
+    delete[] name;
     }
 
-if (!req->address.empty())
+if (!req->address.res_empty())
     {
-    string address;
-    Encode12str(address, req->address.const_data());
-    sprintf(str, "<address value=\"%s\"/>", address.c_str());
+    int len = req->note.const_data().length() * 2 + 1;
+    char * address = new char[len];
+    memset(address, 0, len);
+
+    Encode12(address, req->address.const_data().c_str(), req->address.const_data().length());
+
+    sprintf(str, "<address value=\"%s\"/>", address);
     strcat(r, str);
+    delete[] address;
     }
 
-if (!req->email.empty())
+if (!req->email.res_empty())
     {
-    string email;
-    Encode12str(email, req->email.const_data());
-    sprintf(str, "<email value=\"%s\"/>", email.c_str());
+    int len = req->note.const_data().length() * 2 + 1;
+    char * email = new char[len];
+    memset(email, 0, len);
+
+    Encode12(email, req->email.const_data().c_str(), req->email.const_data().length());
+
+    sprintf(str, "<email value=\"%s\"/>", email);
     strcat(r, str);
+    delete[] email;
     }
 
-if (!req->phone.empty())
+if (!req->phone.res_empty())
     {
-    string phone;
-    Encode12str(phone, req->phone.const_data());
-    sprintf(str, "<phone value=\"%s\"/>", phone.c_str());
+    int len = req->note.const_data().length() * 2 + 1;
+    char * phone = new char[len];
+    memset(phone, 0, len);
+
+    Encode12(phone, req->phone.const_data().c_str(), req->phone.const_data().length());
+
+    sprintf(str, "<phone value=\"%s\"/>", phone);
     strcat(r, str);
+    delete[] phone;
     }
 
-if (!req->group.empty())
+if (!req->group.res_empty())
     {
-    string group;
-    Encode12str(group, req->group.const_data());
-    sprintf(str, "<group value=\"%s\"/>", group.c_str());
+    int len = req->note.const_data().length() * 2 + 1;
+    char * group = new char[len];
+    memset(group, 0, len);
+
+    Encode12(group, req->group.const_data().c_str(), req->group.const_data().length());
+
+    sprintf(str, "<group value=\"%s\"/>", group);
     strcat(r, str);
+    delete[] group;
     }
 
 for (int i = 0; i < USERDATA_NUM; i++)
     {
-    if (!req->ud[i].empty())
+    if (!req->ud[i].res_empty())
         {
-        string ud;
-        Encode12str(ud, req->ud[i].const_data());
-        sprintf(str, "<userdata%d value=\"%s\"/>", i, ud.c_str());
+        int len = req->ud[i].const_data().length() * 2 + 1;
+        char * ud = new char[len];
+        memset(ud, 0, len);
+
+        Encode12(ud, req->ud[i].const_data().c_str(), req->ud[i].const_data().length());
+
+        sprintf(str, "<userdata%d value=\"%s\"/>", i, ud);
         strcat(r, str);
+        delete[] ud;
         }
     }
 
@@ -629,35 +631,30 @@ int CheckParameters(REQUEST * req)
 int u = false;
 int d = false;
 int ud = false;
-int a = !req->admLogin.empty()
-    && !req->admPasswd.empty()
-    && !req->server.empty()
-    && !req->port.empty()
-    && !req->login.empty();
+int a = !req->admLogin.res_empty()
+    && !req->admPasswd.res_empty()
+    && !req->server.res_empty()
+    && !req->port.res_empty()
+    && !req->login.res_empty();
 
-int b = !req->cash.empty()
-    || !req->setCash.empty()
-    || !req->credit.empty()
-    || !req->prepaidTraff.empty()
-    || !req->tariff.empty()
-    || !req->usrMsg.empty()
-    || !req->usrPasswd.empty()
+int b = !req->cash.res_empty()
+    || !req->setCash.res_empty()
+    || !req->credit.res_empty()
+    || !req->prepaidTraff.res_empty()
+    || !req->tariff.res_empty()
+    || !req->usrMsg.res_empty()
+    || !req->usrPasswd.res_empty()
 
-    || !req->note.empty()
-    || !req->name.empty()
-    || !req->address.empty()
-    || !req->email.empty()
-    || !req->phone.empty()
-    || !req->group.empty()
-    || !req->ips.empty()	// IP-address of user
-
-    || !req->createUser
-    || !req->deleteUser;
-
+    || !req->note.res_empty()
+    || !req->name.res_empty()
+    || !req->address.res_empty()
+    || !req->email.res_empty()
+    || !req->phone.res_empty()
+    || !req->group.res_empty();
 
 for (int i = 0; i < DIR_NUM; i++)
     {
-    if (req->u[i].empty())
+    if (req->u[i].res_empty())
         {
         u = true;
         break;
@@ -666,7 +663,7 @@ for (int i = 0; i < DIR_NUM; i++)
 
 for (int i = 0; i < DIR_NUM; i++)
     {
-    if (req->d[i].empty())
+    if (req->d[i].res_empty())
         {
         d = true;
         break;
@@ -675,7 +672,7 @@ for (int i = 0; i < DIR_NUM; i++)
 
 for (int i = 0; i < DIR_NUM; i++)
     {
-    if (req->ud[i].empty())
+    if (req->ud[i].res_empty())
         {
         ud = true;
         break;
@@ -702,9 +699,8 @@ int mainGet(int argc, char **argv)
 int c;
 REQUEST req;
 RESETABLE<string>   t1;
-int missedOptionArg = false;
 
-const char * short_options_get = "s:p:a:w:u:crtmodieNADLPGISOE";
+char * short_options_get = "s:p:a:w:u:crtmodieNADLPG";
 int option_index = -1;
 
 while (1)
@@ -734,7 +730,7 @@ while (1)
             break;
 
         case 'o': //change user password
-            req.usrPasswd = " ";
+            req.usrPasswd = ParsePassword(optarg);
             break;
 
         case 'u': //user
@@ -747,10 +743,6 @@ while (1)
 
         case 'r': //credit
             req.credit = 1;
-            break;
-
-        case 'E': //credit expire
-            req.creditExpire = 1;
             break;
 
         case 'd': //down
@@ -791,18 +783,6 @@ while (1)
 
         case 'G': //Group
             req.group = " ";
-            break;
-	
-	case 'I': //IP-address of user
-	    req.ips = " ";
-	    break;
-
-        case 'S': //Detail stat status
-            req.disableDetailStat = " ";
-            break;
-
-        case 'O': //Always online status
-            req.alwaysOnline = " ";
             break;
 
         case 500: //U
@@ -847,14 +827,8 @@ while (1)
             req.ud[c - 700] = " ";
             break;
 
-        case 800:
-            req.authBy = true;
-            break;
-
         case '?':
-        case ':':
             //printf ("Unknown option \n");
-            missedOptionArg = true;
             break;
 
         default:
@@ -871,17 +845,22 @@ if (optind < argc)
     exit(PARAMETER_PARSING_ERR_CODE);
     }
 
-if (missedOptionArg || !CheckParametersGet(&req))
+if (CheckParametersGet(&req) == 0)
     {
     //printf("Parameter needed\n");
     UsageInfo();
     exit(PARAMETER_PARSING_ERR_CODE);
     }
 
-if (req.authBy)
-    return ProcessAuthBy(req.server.const_data(), req.port.const_data(), req.admLogin.const_data(), req.admPasswd.const_data(), req.login.const_data(), &req);
-else
-    return ProcessGetUser(req.server.const_data(), req.port.const_data(), req.admLogin.const_data(), req.admPasswd.const_data(), req.login.const_data(), &req);
+
+const int rLen = 20000;
+char rstr[rLen];
+memset(rstr, 0, rLen);
+
+CreateRequestGet(&req, rstr);
+Process(req.server, req.port, req.admLogin, req.admPasswd, rstr, ParseReplyGet);
+
+return 0;
 }
 //-----------------------------------------------------------------------------
 int mainSet(int argc, char **argv)
@@ -889,21 +868,17 @@ int mainSet(int argc, char **argv)
 string str;
 
 int c;
-bool isMessage = false;
 REQUEST req;
 
 RESETABLE<string>   t1;
 
-const char * short_options_set = "s:p:a:w:u:c:r:t:m:o:d:i:e:v:nlN:A:D:L:P:G:I:S:O:E:";
-
-int missedOptionArg = false;
+char * short_options_set = "s:p:a:w:u:c:r:t:m:o:d:i:e:v:nlN:A:D:L:P:G:";
 
 while (1)
     {
     int option_index = -1;
 
     c = getopt_long(argc, argv, short_options_set, long_options_set, &option_index);
-
     if (c == -1)
         break;
 
@@ -946,10 +921,6 @@ while (1)
             req.credit = ParseCredit(optarg);
             break;
 
-        case 'E': //credit expire
-            req.creditExpire = ParseCreditExpire(optarg);
-            break;
-
         case 'd': //down
             req.down = ParseDownPassive(optarg);
             break;
@@ -963,9 +934,8 @@ while (1)
             break;
 
         case 'm': //message
-            ParseAnyString(optarg, &str);
-            req.usrMsg = str;
-            isMessage = true;
+            //ParseMessage(optarg, &req.usrMsg);
+            req.usrMsg = optarg;
             break;
 
         case 'e': //Prepaid Traffic
@@ -981,47 +951,33 @@ while (1)
             break;
 
         case 'N': //Note
-            ParseAnyString(optarg, &str, "koi8-ru");
+            ParseAnyString(optarg, &str);
             req.note = str;
             break;
 
         case 'A': //nAme
-            ParseAnyString(optarg, &str, "koi8-ru");
+            ParseAnyString(optarg, &str);
             req.name = str;
             break;
 
         case 'D': //aDdress
-            ParseAnyString(optarg, &str, "koi8-ru");
+            ParseAnyString(optarg, &str);
             req.address = str;
             break;
 
         case 'L': //emaiL
-            ParseAnyString(optarg, &str, "koi8-ru");
+            ParseAnyString(optarg, &str);
             req.email = str;
-            //printf("EMAIL=%s\n", optarg);
             break;
 
         case 'P': //phone
-            ParseAnyString(optarg, &str, "koi8-ru");
+            ParseAnyString(optarg, &str);
             req.phone = str;
             break;
 
         case 'G': //Group
-            ParseAnyString(optarg, &str, "koi8-ru");
-            req.group = str;
-            break;
-
-        case 'I': //IP-address of user
             ParseAnyString(optarg, &str);
-            req.ips = str;
-            break;
-
-        case 'S':
-            req.disableDetailStat = ParseDownPassive(optarg);
-            break;
-
-        case 'O':
-            req.alwaysOnline = ParseDownPassive(optarg);
+            req.group = str;
             break;
 
         case 500: //U
@@ -1062,23 +1018,17 @@ while (1)
         case 707:
         case 708:
         case 709:
-            ParseAnyString(optarg, &str, "koi8-ru");
+            ParseAnyString(optarg, &str);
             //printf("UD%d\n", c - 700);
             req.ud[c - 700] = str;
             break;
 
         case '?':
-            //printf("Missing option argument\n");
-            missedOptionArg = true;
-            break;
-
-        case ':':
-            //printf("Missing option argument\n");
-            missedOptionArg = true;
+            //printf ("Unknown option \n");
             break;
 
         default:
-            printf("?? getopt returned character code 0%o ??\n", c);
+            printf ("?? getopt returned character code 0%o ??\n", c);
         }
     }
 
@@ -1091,7 +1041,7 @@ if (optind < argc)
     exit(PARAMETER_PARSING_ERR_CODE);
     }
 
-if (missedOptionArg || !CheckParametersSet(&req))
+if (CheckParametersSet(&req) == 0)
     {
     //printf("Parameter needed\n");
     UsageConf();
@@ -1102,8 +1052,11 @@ const int rLen = 20000;
 char rstr[rLen];
 memset(rstr, 0, rLen);
 
-CreateRequestSet(&req, rstr);
-return ProcessSetUser(req.server.const_data(), req.port.const_data(), req.admLogin.const_data(), req.admPasswd.const_data(), rstr, NULL, isMessage);
+CreateRequestGet(&req, rstr);
+Process(req.server, req.port, req.admLogin, req.admPasswd, rstr, ParseReplySet);
+//Process(&req);
+
+return 0;
 }
 //-----------------------------------------------------------------------------
 int main(int argc, char **argv)
@@ -1114,15 +1067,13 @@ if (argc <= 2)
     exit(PARAMETER_PARSING_ERR_CODE);
     }
 
-if (strcmp(argv[1], "get") == 0)
+if (strcmp(argv[1], "get"))
     {
-    //printf("get\n");
     return mainGet(argc - 1, argv + 1);
     }
-else if (strcmp(argv[1], "set") == 0)
+else if (strcmp(argv[1], "set"))
     {
-    //printf("set\n");
-    return mainSet(argc - 1, argv + 1);
+    return mainGet(argc - 1, argv + 1);
     }
 else
     {

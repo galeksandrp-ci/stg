@@ -50,7 +50,6 @@ public:
     std::string  GetUsersDir() const { return usersDir; }
     std::string  GetAdminsDir() const { return adminsDir; }
     std::string  GetTariffsDir() const { return tariffsDir; }
-    std::string  GetServicesDir() const { return servicesDir; }
 
     mode_t  GetStatMode() const { return statMode; }
     mode_t  GetStatModeDir() const;
@@ -89,7 +88,6 @@ private:
     std::string  usersDir;
     std::string  adminsDir;
     std::string  tariffsDir;
-    std::string  servicesDir;
 
     mode_t  statMode;
     uid_t   statUID;
@@ -177,11 +175,11 @@ public:
     virtual int DelCorp(const std::string &) const { return 0; }
 
     // Services
-    virtual int GetServicesList(std::vector<std::string> *) const;
-    virtual int SaveService(const SERVICE_CONF &) const;
-    virtual int RestoreService(SERVICE_CONF *, const std::string &) const;
-    virtual int AddService(const std::string &) const;
-    virtual int DelService(const std::string &) const;
+    virtual int GetServicesList(std::vector<std::string> *) const { return 0; }
+    virtual int SaveService(const SERVICE_CONF &) const { return 0; }
+    virtual int RestoreService(SERVICE_CONF *, const std::string &) const { return 0; }
+    virtual int AddService(const std::string &) const { return 0; }
+    virtual int DelService(const std::string &) const { return 0; }
 
     virtual void SetSettings(const MODULE_SETTINGS & s) { settings = s; }
     virtual int ParseSettings();

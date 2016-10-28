@@ -345,7 +345,6 @@ if (store->GetUsersList(&usersList) < 0)
 
 user_iter ui;
 
-unsigned errors = 0;
 for (unsigned int i = 0; i < usersList.size(); i++)
     {
     USER_IMPL u(settings, store, tariffs, sysAdmin, this, m_services);
@@ -356,26 +355,13 @@ for (unsigned int i = 0; i < usersList.size(); i++)
 
     AddUserIntoIndexes(ui);
 
-    if (settings->GetStopOnError())
-        {
-        if (ui->ReadConf() < 0)
-            return -1;
+    if (ui->ReadConf() < 0)
+        return -1;
 
-        if (ui->ReadStat() < 0)
-            return -1;
-        }
-    else
-        {
-        if (ui->ReadConf() < 0)
-            errors++;
-
-        if (ui->ReadStat() < 0)
-            errors++;
-        }
+    if (ui->ReadStat() < 0)
+        return -1;
     }
 
-if (errors > 0)
-    return -1;
 return 0;
 }
 //-----------------------------------------------------------------------------
@@ -517,7 +503,6 @@ else
     }
 
 std::for_each(users.begin(), users.end(), std::mem_fun_ref(&USER_IMPL::ProcessDailyFee));
-std::for_each(users.begin(), users.end(), std::mem_fun_ref(&USER_IMPL::ProcessServices));
 
 if (settings->GetDayFeeIsLastDay())
     {

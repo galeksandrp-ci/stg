@@ -15,13 +15,21 @@
  */
 
 /*
- *    Author : Maxim Mamontiv <faust@stargazer.dp.ua>
+ *    Author : Boris Mikhailenko <stg34@stargazer.dp.ua>
  */
 
-#ifndef __VERSION_H__
-#define __VERSION_H__
+ /*
+ $Author: faust $
+ $Revision: 1.3 $
+ $Date: 2009/08/05 09:29:35 $
+ */
 
-// Stargazer version
-#define SERVER_VERSION "2.409"
+
+#ifndef VERSION_SG_H
+#define VERSION_SG_H
+
+#define VERSION_SG "1.08.9"
 
 #endif
+
+
