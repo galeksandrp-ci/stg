@@ -115,7 +115,7 @@ void GET_TARIFFS::CreateAnswer()
                   "<TraffType value=\"" + TARIFF::TraffTypeToString(it->tariffConf.traffType) + "\"/>" +
                   "<Period value=\"" + TARIFF::PeriodToString(it->tariffConf.period) + "\"/>" +
                   "<ChangePolicy value=\"" + TARIFF::ChangePolicyToString(it->tariffConf.changePolicy) + "\"/>" +
-                  "<ChangePolicyTimeout value=\"" + x2str(it->tariffConf.changePolicyTimeout) + "\"/>" +
+                  "<ChangePolicyTimeout value=\"" + formatTime(it->tariffConf.changePolicyTimeout) + "\"/>" +
                   "</tariff>";
         }
 
